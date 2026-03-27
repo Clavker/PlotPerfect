@@ -1,0 +1,44 @@
+[tool.poetry]
+name = "autocad-tasks"
+version = "0.1.0"
+description = "AutoCAD automation tasks for managing draworder and layouts"
+authors = ["Clavker <your.email@example.com>"]
+license = "MIT"
+readme = "README.md"
+repository = "https://github.com/Clavker/autocad-tasks"
+homepage = "https://github.com/Clavker/autocad-tasks"
+packages = [{include = "autocad_tasks", from = "src"}]
+
+[tool.poetry.dependencies]
+python = "^3.8"
+pyautocad = "^0.2.0"
+pywin32 = "^311"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^7.0"
+black = "^23.0"
+ruff = "^0.1.0"
+mypy = "^1.0"
+pre-commit = "^3.0"
+
+[tool.poetry.scripts]
+autocad-tasks = "autocad_tasks.main:main"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.black]
+line-length = 100
+target-version = ['py38']
+
+[tool.ruff]
+line-length = 100
+select = ["E", "F", "W", "I"]
+ignore = ["E501"]
+
+[tool.mypy]
+python_version = "3.8"
+warn_return_any = true
+warn_unused_configs = true
+ignore_missing_imports = true

@@ -1,0 +1,8 @@
+Вся структура:
+find . -type f -o -type d | sort
+
+Структура папки:
+find Папка/ -type f -o -type d | sort
+
+Запуск приложения:
+poetry run python src/autocad_tasks/main.py
