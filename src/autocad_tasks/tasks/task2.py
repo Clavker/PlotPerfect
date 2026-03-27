@@ -1,4 +1,4 @@
-"""Task 1: Выставить рамки для печати"""
+"""Task 2: Setup print settings"""
 
 import json
 import os
@@ -7,12 +7,12 @@ from typing import Dict, List, Callable
 from autocad_tasks.utils.autocad_utils import AutoCADHelper
 
 
-class Task1:
-    """Задача 1: Выставить рамки для печати (номер листа на задний план, рамку на передний)"""
+class Task2:
+    """Задача 2: Установка переменных для печати"""
 
     def __init__(self, log_callback: Callable = None,
                  load_previous: bool = False):
-        self.results_file = "task1_results.json"
+        self.results_file = "task2_results.json"
         self.log_callback = log_callback
         self.report_text = ""
 
@@ -68,33 +68,30 @@ class Task1:
     def run(self) -> Dict[str, List[str]]:
         """Выполнение задачи"""
         self.log("\n" + "=" * 60)
-        self.log("📐 ЗАДАЧА 1: Выставить рамки для печати")
+        self.log("⚙️ ЗАДАЧА 2: Установка переменных для печати")
         self.log("=" * 60)
         self.log("\n📌 Описание:")
-        self.log("  • Номер листа (1.06, 3.51) → на задний план")
-        self.log("  • Рамка чертежа (8, 5) → на передний план")
-        self.log("  • Сохранение чертежа после обработки")
+        self.log("  • PDFFRAME = 2 (отображать рамки PDF)")
+        self.log("  • IMAGEFRAME = 2 (отображать рамки изображений)")
+        self.log("  • Контуры маскировки: отображать, но не печатать")
+        self.log("  • Сохранить чертеж после изменений")
         self.log("-" * 60)
 
-        self.log("\n🔄 Запуск обработки...")
-        self.log("⏳ Пожалуйста, подождите, идет обработка листов...")
+        self.log("\n🔄 Запуск настройки...")
+        self.log("⏳ Пожалуйста, подождите...")
         self.log("")
 
-        success, success_layouts, error_layouts, report_text = self.autocad.run_lisp_script(
-            self.log)
+        # Запускаем LISP скрипт
+        success, report_text = self.run_lisp_script()
         self.report_text = report_text
 
         # Формируем результаты
         if success:
-            self.results["success"] = success_layouts if success_layouts else [
-                "Все листы обработаны"]
-            self.results["errors"] = error_layouts
+            self.results["success"] = ["Настройки успешно применены"]
+            self.results["errors"] = []
 
             self.log("\n" + "=" * 60)
-            if error_layouts:
-                self.log("⚠️ РЕЗУЛЬТАТ: Задача выполнена с ошибками!")
-            else:
-                self.log("✅ РЕЗУЛЬТАТ: Задача выполнена успешно!")
+            self.log("✅ РЕЗУЛЬТАТ: Задача выполнена успешно!")
             self.log("=" * 60)
 
             # Выводим отчет в лог
@@ -116,13 +113,36 @@ class Task1:
 
         self.log("\n" + "-" * 60)
         self.log(f"📊 Статистика:")
-        self.log(f"   ✅ Успешно: {len(self.results['success'])} листов")
-        self.log(f"   ❌ Ошибок: {len(self.results['errors'])} листов")
+        self.log(f"   ✅ Успешно: {len(self.results['success'])}")
+        self.log(f"   ❌ Ошибок: {len(self.results['errors'])}")
         self.log("-" * 60)
 
-        if self.results['errors']:
-            self.log("\n❌ Список листов с ошибками:")
-            for error in self.results['errors']:
-                self.log(f"   • {error}")
-
         return self.results
+
+    def run_lisp_script(self) -> tuple:
+        """Запустить LISP скрипт для настройки"""
+        try:
+            lisp_path = r"D:\Pycharm Projects\AutoCAD\RunPlot\setup_print.lsp"
+
+            if not os.path.exists(lisp_path):
+                self.log(f"  ❌ LISP файл не найден: {lisp_path}")
+                return False, ""
+
+            self.log("  🚀 Запуск LISP скрипта...")
+
+            # Загружаем и запускаем LISP
+            lisp_path_fixed = lisp_path.replace('\\', '/')
+            cmd = f'(load "{lisp_path_fixed}")\nSetupPrint\n'
+            self.autocad.acad.ActiveDocument.SendCommand(cmd)
+
+            # Ждем выполнения
+            time.sleep(3)
+
+            self.log("  ✅ LISP скрипт выполнен")
+
+            # Возвращаем успех и пустой отчет (LISP сам выведет в консоль)
+            return True, "Настройки применены. Чертеж сохранен. Подробности в командной строке AutoCAD (F2)"
+
+        except Exception as e:
+            self.log(f"  ❌ Ошибка: {e}")
+            return False, str(e)

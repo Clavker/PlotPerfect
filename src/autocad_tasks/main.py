@@ -3,6 +3,7 @@
 import tkinter as tk
 from tkinter import ttk, messagebox, scrolledtext
 from autocad_tasks.tasks.task1 import Task1
+from autocad_tasks.tasks.task2 import Task2
 
 
 class AutoCADTasksApp:
@@ -11,15 +12,16 @@ class AutoCADTasksApp:
     def __init__(self, root: tk.Tk):
         self.root = root
         self.root.title("AutoCAD Task Manager")
-        self.root.geometry("750x600")
+        self.root.geometry(
+            "800x750")  # Увеличим высоту для дополнительного статуса
 
         self.tasks_status = {}
         self.task_instances = {}
         self.task_frames = {}
+        self.task_results = {}  # Сохраняем результаты выполнения задач
+        self.task_completed = {}  # Сохраняем статус выполнения каждой задачи
 
         self.create_widgets()
-        # Не загружаем старые статусы, оставляем статус "Не выполнялась"
-        # self.load_task_statuses() - убираем эту строку
 
     def create_widgets(self):
         # Верхняя панель с кнопкой Auto
@@ -37,6 +39,15 @@ class AutoCADTasksApp:
             foreground="gray",
         )
         info_label.pack(side=tk.LEFT, padx=10)
+
+        # Статус оптимизации документа
+        self.optimization_status = ttk.Label(
+            top_frame,
+            text="❌ Документ не оптимизирован для печати",
+            font=("Arial", 9, "bold"),
+            foreground="red"
+        )
+        self.optimization_status.pack(side=tk.RIGHT, padx=10)
 
         ttk.Separator(self.root, orient="horizontal").pack(fill=tk.X, padx=10,
                                                            pady=5)
@@ -56,13 +67,33 @@ class AutoCADTasksApp:
             "Отправляет номер листа (1.06, 3.51) на задний план, рамку чертежа (8, 5) на передний",
         )
 
+        # Добавление задачи 2
+        self.add_task_widget(
+            "Задача 2: Установка переменных для печати",
+            self.run_task2,
+            "Устанавливает PDFFRAME=2, IMAGEFRAME=2, контуры маскировки без печати",
+        )
+
         ttk.Separator(self.root, orient="horizontal").pack(fill=tk.X, padx=10,
                                                            pady=5)
 
+        # Панель для лога с кнопкой очистки
+        log_panel = ttk.Frame(self.root)
+        log_panel.pack(fill=tk.X, padx=10, pady=(10, 5))
+
         log_label = ttk.Label(
-            self.root, text="📝 Лог выполнения:", font=("Arial", 9, "bold")
+            log_panel, text="📝 Лог выполнения:", font=("Arial", 9, "bold")
         )
-        log_label.pack(anchor=tk.W, padx=10, pady=(10, 5))
+        log_label.pack(side=tk.LEFT)
+
+        # Кнопка очистки лога
+        clear_btn = ttk.Button(
+            log_panel,
+            text="🗑️ Очистить лог",
+            command=self.clear_log,
+            width=14
+        )
+        clear_btn.pack(side=tk.RIGHT, padx=(0, 0))
 
         # Создаем текстовое поле с прокруткой
         text_frame = ttk.Frame(self.root)
@@ -71,7 +102,7 @@ class AutoCADTasksApp:
         self.log_text = scrolledtext.ScrolledText(
             text_frame,
             height=15,
-            width=80,
+            width=85,
             wrap=tk.WORD,
             font=("Consolas", 9)
         )
@@ -100,15 +131,17 @@ class AutoCADTasksApp:
             frame,
             text="▶ Запустить",
             command=lambda: self.run_single_task(task_function, task_name),
+            width=12
         )
         run_btn.pack(side=tk.RIGHT, padx=5)
 
-        # Метка статуса (всегда начинаем с "Не выполнялась")
+        # Метка статуса
         status_label = ttk.Label(frame, text="⚪ Не выполнялась",
-                                 foreground="gray")
+                                 foreground="gray", width=15)
         status_label.pack(side=tk.RIGHT, padx=10)
 
         self.task_frames[task_name + "_status"] = status_label
+        self.task_completed[task_name] = False
 
         # Описание
         if description:
@@ -117,6 +150,7 @@ class AutoCADTasksApp:
                 text=f"  📌 {description}",
                 foreground="blue",
                 font=("Arial", 8),
+                wraplength=700
             )
             desc_label.pack(anchor=tk.W, padx=(30, 10), pady=(0, 5))
 
@@ -128,29 +162,71 @@ class AutoCADTasksApp:
                 self.task_frames[status_key].config(
                     text="❌ Ошибка", foreground="red"
                 )
+                self.task_completed[task_name] = False
             elif result.get("success") and len(result.get("success")) > 0:
                 self.task_frames[status_key].config(
                     text="✅ Выполнена", foreground="green"
                 )
+                self.task_completed[task_name] = True
             else:
                 self.task_frames[status_key].config(
                     text="⚠️ Нет данных", foreground="orange"
                 )
+                self.task_completed[task_name] = False
 
-    def reset_task_statuses(self):
-        """Сбросить статусы всех задач"""
-        for task_name in self.task_frames:
-            if task_name.endswith("_status"):
-                continue
-            status_key = task_name + "_status"
-            if status_key in self.task_frames:
-                self.task_frames[status_key].config(
-                    text="⚪ Не выполнялась", foreground="gray"
+        # Обновляем общий статус оптимизации
+        self.update_optimization_status()
+
+    def update_optimization_status(self):
+        """Обновить общий статус оптимизации документа"""
+        all_completed = all(self.task_completed.values())
+
+        if all_completed and self.task_completed:
+            self.optimization_status.config(
+                text="✅ Документ AutoCAD полностью оптимизирован для печати",
+                foreground="green"
+            )
+        else:
+            # Проверяем, есть ли хоть одна выполненная задача
+            any_completed = any(self.task_completed.values())
+            if any_completed:
+                completed_count = sum(
+                    1 for v in self.task_completed.values() if v)
+                total_count = len(self.task_completed)
+                self.optimization_status.config(
+                    text=f"⚠️ Оптимизировано {completed_count}/{total_count} задач",
+                    foreground="orange"
+                )
+            else:
+                # Нет выполненных задач
+                self.optimization_status.config(
+                    text="❌ Документ не оптимизирован для печати",
+                    foreground="red"
                 )
 
+    def reset_task_statuses(self, selected_tasks=None):
+        """
+        Сбросить статусы только для выбранных задач
+        Если selected_tasks=None, сбрасываем все
+        """
+        tasks_to_reset = selected_tasks if selected_tasks else self.task_completed.keys()
+
+        for task_name in tasks_to_reset:
+            if task_name in self.task_completed:
+                status_key = task_name + "_status"
+                if status_key in self.task_frames:
+                    # Сбрасываем только если задача еще не выполнена
+                    if not self.task_completed[task_name]:
+                        self.task_frames[status_key].config(
+                            text="⚪ Не выполнялась", foreground="gray"
+                        )
+                    # Если задача уже выполнена, не сбрасываем статус
+
     def clear_log(self):
-        """Очистить лог"""
+        """Очистить лог выполнения"""
         self.log_text.delete(1.0, tk.END)
+        self.log("📝 Лог очищен")
+        self.log("=" * 60)
 
     def log(self, message: str):
         """Вывод сообщения в лог с автоскроллом"""
@@ -160,9 +236,8 @@ class AutoCADTasksApp:
 
     def run_single_task(self, task_func, task_name: str):
         """Запуск одной задачи"""
-        # Сначала очищаем лог и сбрасываем статусы? (по желанию)
-        # self.clear_log() - раскомментируйте, если нужно очищать лог
-        self.reset_task_statuses()
+        # Сбрасываем статус только для текущей задачи
+        self.reset_task_statuses([task_name])
 
         self.log(f"\n{'█' * 60}")
         self.log(f"▶ ЗАПУСК: {task_name}")
@@ -172,6 +247,13 @@ class AutoCADTasksApp:
         if task_name == "Задача 1: Выставить рамки для печати":
             task = Task1(log_callback=self.log)
             result = task.run()
+            self.task_results[task_name] = result
+            self.update_task_status(task_name, result)
+            self.show_task_report(task_name, result)
+        elif task_name == "Задача 2: Установка переменных для печати":
+            task = Task2(log_callback=self.log)
+            result = task.run()
+            self.task_results[task_name] = result
             self.update_task_status(task_name, result)
             self.show_task_report(task_name, result)
 
@@ -186,8 +268,8 @@ class AutoCADTasksApp:
             )
             return
 
-        # Сбрасываем статусы перед выполнением
-        self.reset_task_statuses()
+        # Сбрасываем статусы только для выбранных задач
+        self.reset_task_statuses(selected_tasks)
 
         self.log("\n" + "█" * 60)
         self.log("🚀 ЗАПУСК ВСЕХ ЗАДАЧ")
@@ -197,6 +279,12 @@ class AutoCADTasksApp:
             if task_name == "Задача 1: Выставить рамки для печати":
                 task = Task1(log_callback=self.log)
                 result = task.run()
+                self.task_results[task_name] = result
+                self.update_task_status(task_name, result)
+            elif task_name == "Задача 2: Установка переменных для печати":
+                task = Task2(log_callback=self.log)
+                result = task.run()
+                self.task_results[task_name] = result
                 self.update_task_status(task_name, result)
 
         self.show_final_report()
@@ -205,7 +293,17 @@ class AutoCADTasksApp:
         """Выполнение задачи 1"""
         task = Task1(log_callback=self.log)
         result = task.run()
+        self.task_results["Задача 1: Выставить рамки для печати"] = result
         self.update_task_status("Задача 1: Выставить рамки для печати", result)
+        return result
+
+    def run_task2(self):
+        """Выполнение задачи 2"""
+        task = Task2(log_callback=self.log)
+        result = task.run()
+        self.task_results["Задача 2: Установка переменных для печати"] = result
+        self.update_task_status("Задача 2: Установка переменных для печати",
+                                result)
         return result
 
     def show_task_report(self, task_name: str, result):
@@ -213,12 +311,12 @@ class AutoCADTasksApp:
         if result["errors"]:
             messagebox.showwarning(
                 "Завершено с ошибками",
-                f"{task_name}\n\n✅ Успешно: {len(result['success'])} листов\n❌ Ошибки: {len(result['errors'])} листов\n\n📋 Подробности в логе",
+                f"{task_name}\n\n✅ Успешно: {len(result['success'])}\n❌ Ошибки: {len(result['errors'])}\n\n📋 Подробности в логе",
             )
         else:
             messagebox.showinfo(
                 "Успешно",
-                f"{task_name}\n\n✅ Задача выполнена успешно!\n📋 Обработано: {len(result['success'])} листов\n\nПодробности в логе"
+                f"{task_name}\n\n✅ Задача выполнена успешно!\n\nПодробности в логе"
             )
 
     def show_final_report(self):
