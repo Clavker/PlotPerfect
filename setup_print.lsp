@@ -5,44 +5,37 @@
   (princ "\nЗадача 2: Установка переменных для печати")
   (princ "\n==================================================")
 
-  ; Настраиваем PDFFRAME
-  (princ "\n📄 Настройка PDFFRAME...")
-  (setvar "PDFFRAME" 2)
-  (princ " ✅ PDFFRAME = 2 (отображать рамки PDF)")
+  (setvar "cmdecho" 0)
 
-  ; Настраиваем IMAGEFRAME
-  (princ "\n🖼️ Настройка IMAGEFRAME...")
-  (setvar "IMAGEFRAME" 2)
-  (princ " ✅ IMAGEFRAME = 2 (отображать рамки изображений)")
+  (princ "\n📁 Сохранение чертежа...")
+  (command "_.QSAVE")
+  (princ " ✅")
 
-  ; Настройка маскировки (контуры отображать без печати)
-  (princ "\n🎭 Настройка маскировки...")
+  ; Используем команду -SETVAR для принудительной установки
+  (princ "\n📄 Установка PDFFRAME = 2...")
+  (command "_.-SETVAR" "PDFFRAME" "2")
+  (princ " ✅")
 
-  ; WIPEOUTFRAME: 0 - не отображать, 1 - отображать, 2 - отображать и печатать
-  ; Нам нужно отображать, но не печатать - значение 1
-  (setvar "WIPEOUTFRAME" 1)
-  (princ " ✅ WIPEOUTFRAME = 1 (контуры отображаются, но не печатаются)")
+  (princ "\n🖼️ Установка IMAGEFRAME = 2...")
+  (command "_.-SETVAR" "IMAGEFRAME" "2")
+  (princ " ✅")
 
-  ; Дополнительные параметры для маскировки
-  (setvar "FRAME" 1)
-  (princ " ✅ FRAME = 1 (отображать рамки)")
+  (princ "\n🎭 Установка WIPEOUTFRAME = 1...")
+  (command "_.-SETVAR" "WIPEOUTFRAME" "1")
+  (princ " ✅")
 
-  ; Сохраняем изменения
+  (princ "\n📐 Установка FRAME = 2...")
+  (command "_.-SETVAR" "FRAME" "2")
+  (princ " ✅")
+
   (princ "\n📁 Сохранение изменений...")
   (command "_.QSAVE")
-  (princ " ✅ Чертеж сохранен")
+  (princ " ✅")
 
-  ; Итоговый отчет
+  (setvar "cmdecho" 1)
+
   (princ "\n\n==================================================")
-  (princ "\nИТОГОВЫЙ ОТЧЕТ")
-  (princ "\n==================================================")
   (princ "\n✅ Задача выполнена успешно!")
-  (princ "\n\nУстановлены параметры:")
-  (princ "\n  • PDFFRAME = 2")
-  (princ "\n  • IMAGEFRAME = 2")
-  (princ "\n  • WIPEOUTFRAME = 1 (контуры отображаются, не печатаются)")
-  (princ "\n  • FRAME = 1")
-  (princ "\n\n✅ Чертеж сохранен после изменений")
   (princ "\n==================================================")
   (princ)
 )
