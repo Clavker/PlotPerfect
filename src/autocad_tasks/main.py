@@ -6,6 +6,7 @@ from autocad_tasks.tasks.task1 import Task1
 from autocad_tasks.tasks.task2 import Task2
 from autocad_tasks.tasks.task3 import Task3
 from autocad_tasks.tasks.task4 import Task4
+from autocad_tasks.tasks.task5 import Task5
 
 
 class AutoCADTasksApp:
@@ -87,6 +88,13 @@ class AutoCADTasksApp:
             "Задача 4: Удаление дублирующихся объектов",
             self.run_task4,
             "Применение команды OVERKILL - удаление дублирующихся и перекрывающихся объектов",
+        )
+
+        # Добавление задачи 5
+        self.add_task_widget(
+            "Задача 5: Проверка и исправление ошибок чертежа",
+            self.run_task5,
+            "Применение команды AUDIT - проверка и автоматическое исправление ошибок чертежа",
         )
 
         ttk.Separator(self.root, orient="horizontal").pack(fill=tk.X, padx=10,
@@ -273,6 +281,12 @@ class AutoCADTasksApp:
             self.task_results[task_name] = result
             self.update_task_status(task_name, result)
             self.show_task_report(task_name, result)
+        elif task_name == "Задача 5: Проверка и исправление ошибок чертежа":
+            task = Task5(log_callback=self.log)
+            result = task.run()
+            self.task_results[task_name] = result
+            self.update_task_status(task_name, result)
+            self.show_task_report(task_name, result)
 
     def run_all_tasks(self):
         """Запуск всех отмеченных задач"""
@@ -309,6 +323,11 @@ class AutoCADTasksApp:
                 self.update_task_status(task_name, result)
             elif task_name == "Задача 4: Удаление дублирующихся объектов":
                 task = Task4(log_callback=self.log)
+                result = task.run()
+                self.task_results[task_name] = result
+                self.update_task_status(task_name, result)
+            elif task_name == "Задача 5: Проверка и исправление ошибок чертежа":
+                task = Task5(log_callback=self.log)
                 result = task.run()
                 self.task_results[task_name] = result
                 self.update_task_status(task_name, result)
@@ -349,6 +368,16 @@ class AutoCADTasksApp:
         self.task_results["Задача 4: Удаление дублирующихся объектов"] = result
         self.update_task_status("Задача 4: Удаление дублирующихся объектов",
                                 result)
+        return result
+
+    def run_task5(self):
+        """Выполнение задачи 5"""
+        task = Task5(log_callback=self.log)
+        result = task.run()
+        self.task_results[
+            "Задача 5: Проверка и исправление ошибок чертежа"] = result
+        self.update_task_status(
+            "Задача 5: Проверка и исправление ошибок чертежа", result)
         return result
 
     def show_task_report(self, task_name: str, result):
