@@ -2,6 +2,9 @@
 
 import tkinter as tk
 from tkinter import ttk, messagebox, scrolledtext
+import subprocess
+import os
+import sys
 from autocad_tasks.tasks.task1 import Task1
 from autocad_tasks.tasks.task2 import Task2
 from autocad_tasks.tasks.task3 import Task3
@@ -15,7 +18,7 @@ class AutoCADTasksApp:
     def __init__(self, root: tk.Tk):
         self.root = root
         self.root.title("AutoCAD Task Manager")
-        self.root.geometry("800x850")  # Увеличим высоту для четвертой задачи
+        self.root.geometry("850x850")
 
         self.tasks_status = {}
         self.task_instances = {}
@@ -25,8 +28,20 @@ class AutoCADTasksApp:
 
         self.create_widgets()
 
+    def open_numbering_window(self):
+        """Открыть окно автонумерации."""
+        try:
+            bat_path = r"D:\Pycharm Projects\AutoCAD\RunPlot\run_numbering.bat"
+            if os.path.exists(bat_path):
+                subprocess.Popen([bat_path])
+            else:
+                messagebox.showerror("Ошибка", f"Файл не найден: {bat_path}")
+        except Exception as e:
+            messagebox.showerror("Ошибка",
+                                 f"Не удалось запустить автонумерацию: {e}")
+
     def create_widgets(self):
-        # Верхняя панель с кнопкой Auto
+        # Верхняя панель с кнопками
         top_frame = ttk.Frame(self.root)
         top_frame.pack(fill=tk.X, padx=10, pady=10)
 
@@ -34,6 +49,15 @@ class AutoCADTasksApp:
             top_frame, text="🚀 AUTO", command=self.run_all_tasks, width=15
         )
         self.auto_btn.pack(side=tk.LEFT, padx=5)
+
+        # Кнопка для вызова автонумерации
+        self.numeration_btn = ttk.Button(
+            top_frame,
+            text="🔢 Автонумерация",
+            command=self.open_numbering_window,
+            width=18
+        )
+        self.numeration_btn.pack(side=tk.LEFT, padx=5)
 
         info_label = ttk.Label(
             top_frame,
