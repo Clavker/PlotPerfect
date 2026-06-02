@@ -5,13 +5,24 @@ from tkinter import ttk, messagebox
 import pythoncom
 import comtypes.client
 import threading
+import sys
+import os
 from typing import List, Tuple
+
+
+def get_base_path():
+    """Получить базовый путь для файлов."""
+    if getattr(sys, 'frozen', False):
+        return os.path.dirname(sys.executable)
+    else:
+        return os.path.dirname(os.path.abspath(__file__))
 
 
 class AutoCADHandler:
     def __init__(self):
         self.acad = None
         self.doc = None
+        self.base_path = get_base_path()
 
     def connect(self) -> bool:
         try:
@@ -49,7 +60,6 @@ class AutoCADHandler:
                 obj = sel.Item(i)
                 obj_name = str(obj.ObjectName).lower()
                 if 'text' in obj_name or 'mtext' in obj_name:
-                    # Сохраняем ObjectID для последующего получения объекта
                     objects.append(obj.ObjectID)
 
             sel.Delete()
@@ -59,7 +69,6 @@ class AutoCADHandler:
             return []
 
     def get_object_by_id(self, obj_id):
-        """Получить объект по ObjectID"""
         try:
             return self.doc.ObjectIDToObject(obj_id)
         except:
@@ -90,7 +99,8 @@ class NumberingApp:
         self.root.resizable(False, False)
 
         self.handler = AutoCADHandler()
-        self.text_ids = []  # Храним ObjectID
+        self.text_ids = []
+        self.base_path = get_base_path()
 
         self.setup_ui()
 
@@ -239,13 +249,11 @@ class NumberingApp:
         sort_dir = self.sort_var.get()
         format_type = self.format_var.get()
 
-        # Подключаемся к AutoCAD для обновления
         if not self.handler.connect():
             messagebox.showerror("Ошибка",
-                                 "Не удалось подключиться к AutoCAD para обновления")
+                                 "Не удалось подключиться к AutoCAD для обновления")
             return
 
-        # Получаем объекты по ObjectID
         objects = []
         for obj_id in self.text_ids:
             obj = self.handler.get_object_by_id(obj_id)
@@ -258,7 +266,6 @@ class NumberingApp:
             self.handler.disconnect()
             return
 
-        # Сортируем
         objects_with_coords = []
         for obj in objects:
             try:
@@ -276,7 +283,6 @@ class NumberingApp:
         elif sort_dir == "top_to_bottom":
             objects_with_coords.sort(key=lambda item: -item[2])
 
-        # Применяем нумерацию
         success_count = 0
         for i, (obj, x, y) in enumerate(objects_with_coords):
             try:
@@ -288,14 +294,11 @@ class NumberingApp:
                 else:
                     num_str = str(num)
                 new_text = f"{prefix}{num_str}{suffix}"
-
                 obj.TextString = new_text
                 success_count += 1
-
             except Exception as e:
                 print(f"Ошибка обновления: {e}")
 
-        # Отключаемся
         self.handler.disconnect()
 
         if success_count > 0:

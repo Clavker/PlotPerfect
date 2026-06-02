@@ -3,24 +3,23 @@
 import json
 import os
 import time
-from typing import Dict, List, Callable
+from typing import Dict, List, Callable, Tuple
 from autocad_tasks.utils.autocad_utils import AutoCADHelper
 
 
 class Task1:
     """Задача 1: Выставить рамки для печати (номер листа на задний план, рамку на передний)"""
 
-    def __init__(self, log_callback: Callable = None,
-                 load_previous: bool = False):
+    def __init__(self, log_callback: Callable = None, base_path: str = None, load_previous: bool = False):
         self.results_file = "task1_results.json"
         self.log_callback = log_callback
         self.report_text = ""
+        self.base_path = base_path
 
         if load_previous:
             self.last_results = self.load_last_results()
         else:
-            self.last_results = {"success": [], "errors": [], "report": "",
-                                 "timestamp": None}
+            self.last_results = {"success": [], "errors": [], "report": "", "timestamp": None}
 
         try:
             self.autocad = AutoCADHelper()
@@ -81,23 +80,26 @@ class Task1:
         self.log("")
 
         success, success_layouts, error_layouts, report_text = self.autocad.run_lisp_script(
-            self.log)
+            "process_layouts.lsp", "PPGO", self.log)
         self.report_text = report_text
 
-        # Формируем результаты
         if success:
-            self.results["success"] = success_layouts if success_layouts else [
-                "Все листы обработаны"]
-            self.results["errors"] = error_layouts
+            # Если есть результаты из файла - используем их
+            if success_layouts or error_layouts:
+                self.results["success"] = success_layouts
+                self.results["errors"] = error_layouts
+            else:
+                # Если результатов нет, но команда выполнилась - считаем успехом
+                self.results["success"] = ["Все листы обработаны (подробности в AutoCAD)"]
+                self.results["errors"] = []
 
             self.log("\n" + "=" * 60)
-            if error_layouts:
+            if self.results["errors"]:
                 self.log("⚠️ РЕЗУЛЬТАТ: Задача выполнена с ошибками!")
             else:
                 self.log("✅ РЕЗУЛЬТАТ: Задача выполнена успешно!")
             self.log("=" * 60)
 
-            # Выводим отчет в лог
             if report_text:
                 self.log("\n📋 ПОДРОБНЫЙ ОТЧЕТ:")
                 self.log("-" * 60)
@@ -105,6 +107,8 @@ class Task1:
                     if line.strip():
                         self.log(f"  {line}")
                 self.log("-" * 60)
+            else:
+                self.log("\n💡 Подробный отчет смотрите в командной строке AutoCAD (нажмите F2)")
         else:
             self.results["success"] = []
             self.results["errors"] = ["Ошибка выполнения LISP скрипта"]

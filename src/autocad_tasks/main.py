@@ -12,6 +12,16 @@ from autocad_tasks.tasks.task4 import Task4
 from autocad_tasks.tasks.task5 import Task5
 
 
+def get_base_path():
+    """Получить базовый путь для файлов (работает и для exe и для скрипта)."""
+    if getattr(sys, 'frozen', False):
+        # Запущено как exe
+        return os.path.dirname(sys.executable)
+    else:
+        # Запущено как скрипт
+        return os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+
 class AutoCADTasksApp:
     """Главное окно приложения"""
 
@@ -26,16 +36,29 @@ class AutoCADTasksApp:
         self.task_results = {}
         self.task_completed = {}
 
+        self.base_path = get_base_path()
+
         self.create_widgets()
 
     def open_numbering_window(self):
-        """Открыть окно автонумерации."""
+        """Открыть окно автонумерации в отдельном процессе."""
         try:
-            bat_path = r"D:\Pycharm Projects\AutoCAD\RunPlot\run_numbering.bat"
-            if os.path.exists(bat_path):
-                subprocess.Popen([bat_path])
+            # Путь к exe автонумерации в той же папке
+            exe_path = os.path.join(self.base_path, "AutoCAD_Numbering.exe")
+
+            if os.path.exists(exe_path):
+                subprocess.Popen(['powershell', '-Command',
+                                  f'Start-Process "{exe_path}" -Verb RunAs'])
+                self.log("  🔢 Запуск автонумерации от имени администратора...")
             else:
-                messagebox.showerror("Ошибка", f"Файл не найден: {bat_path}")
+                # Пробуем bat-файл
+                bat_path = os.path.join(self.base_path,
+                                        "run_numbering_admin.bat")
+                if os.path.exists(bat_path):
+                    subprocess.Popen([bat_path])
+                else:
+                    messagebox.showerror("Ошибка",
+                                         "Файл AutoCAD_Numbering.exe не найден в папке программы")
         except Exception as e:
             messagebox.showerror("Ошибка",
                                  f"Не удалось запустить автонумерацию: {e}")
@@ -282,31 +305,31 @@ class AutoCADTasksApp:
         self.log(f"{'█' * 60}")
 
         if task_name == "Задача 1: Выставить рамки для печати":
-            task = Task1(log_callback=self.log)
+            task = Task1(log_callback=self.log, base_path=self.base_path)
             result = task.run()
             self.task_results[task_name] = result
             self.update_task_status(task_name, result)
             self.show_task_report(task_name, result)
         elif task_name == "Задача 2: Установка переменных для печати":
-            task = Task2(log_callback=self.log)
+            task = Task2(log_callback=self.log, base_path=self.base_path)
             result = task.run()
             self.task_results[task_name] = result
             self.update_task_status(task_name, result)
             self.show_task_report(task_name, result)
         elif task_name == "Задача 3: Очистка чертежа от неиспользуемых объектов":
-            task = Task3(log_callback=self.log)
+            task = Task3(log_callback=self.log, base_path=self.base_path)
             result = task.run()
             self.task_results[task_name] = result
             self.update_task_status(task_name, result)
             self.show_task_report(task_name, result)
         elif task_name == "Задача 4: Удаление дублирующихся объектов":
-            task = Task4(log_callback=self.log)
+            task = Task4(log_callback=self.log, base_path=self.base_path)
             result = task.run()
             self.task_results[task_name] = result
             self.update_task_status(task_name, result)
             self.show_task_report(task_name, result)
         elif task_name == "Задача 5: Проверка и исправление ошибок чертежа":
-            task = Task5(log_callback=self.log)
+            task = Task5(log_callback=self.log, base_path=self.base_path)
             result = task.run()
             self.task_results[task_name] = result
             self.update_task_status(task_name, result)
@@ -331,27 +354,27 @@ class AutoCADTasksApp:
 
         for task_name in selected_tasks:
             if task_name == "Задача 1: Выставить рамки для печати":
-                task = Task1(log_callback=self.log)
+                task = Task1(log_callback=self.log, base_path=self.base_path)
                 result = task.run()
                 self.task_results[task_name] = result
                 self.update_task_status(task_name, result)
             elif task_name == "Задача 2: Установка переменных для печати":
-                task = Task2(log_callback=self.log)
+                task = Task2(log_callback=self.log, base_path=self.base_path)
                 result = task.run()
                 self.task_results[task_name] = result
                 self.update_task_status(task_name, result)
             elif task_name == "Задача 3: Очистка чертежа от неиспользуемых объектов":
-                task = Task3(log_callback=self.log)
+                task = Task3(log_callback=self.log, base_path=self.base_path)
                 result = task.run()
                 self.task_results[task_name] = result
                 self.update_task_status(task_name, result)
             elif task_name == "Задача 4: Удаление дублирующихся объектов":
-                task = Task4(log_callback=self.log)
+                task = Task4(log_callback=self.log, base_path=self.base_path)
                 result = task.run()
                 self.task_results[task_name] = result
                 self.update_task_status(task_name, result)
             elif task_name == "Задача 5: Проверка и исправление ошибок чертежа":
-                task = Task5(log_callback=self.log)
+                task = Task5(log_callback=self.log, base_path=self.base_path)
                 result = task.run()
                 self.task_results[task_name] = result
                 self.update_task_status(task_name, result)
@@ -359,16 +382,14 @@ class AutoCADTasksApp:
         self.show_final_report()
 
     def run_task1(self):
-        """Выполнение задачи 1"""
-        task = Task1(log_callback=self.log)
+        task = Task1(log_callback=self.log, base_path=self.base_path)
         result = task.run()
         self.task_results["Задача 1: Выставить рамки для печати"] = result
         self.update_task_status("Задача 1: Выставить рамки для печати", result)
         return result
 
     def run_task2(self):
-        """Выполнение задачи 2"""
-        task = Task2(log_callback=self.log)
+        task = Task2(log_callback=self.log, base_path=self.base_path)
         result = task.run()
         self.task_results["Задача 2: Установка переменных для печати"] = result
         self.update_task_status("Задача 2: Установка переменных для печати",
@@ -376,8 +397,7 @@ class AutoCADTasksApp:
         return result
 
     def run_task3(self):
-        """Выполнение задачи 3"""
-        task = Task3(log_callback=self.log)
+        task = Task3(log_callback=self.log, base_path=self.base_path)
         result = task.run()
         self.task_results[
             "Задача 3: Очистка чертежа от неиспользуемых объектов"] = result
@@ -386,8 +406,7 @@ class AutoCADTasksApp:
         return result
 
     def run_task4(self):
-        """Выполнение задачи 4"""
-        task = Task4(log_callback=self.log)
+        task = Task4(log_callback=self.log, base_path=self.base_path)
         result = task.run()
         self.task_results["Задача 4: Удаление дублирующихся объектов"] = result
         self.update_task_status("Задача 4: Удаление дублирующихся объектов",
@@ -395,8 +414,7 @@ class AutoCADTasksApp:
         return result
 
     def run_task5(self):
-        """Выполнение задачи 5"""
-        task = Task5(log_callback=self.log)
+        task = Task5(log_callback=self.log, base_path=self.base_path)
         result = task.run()
         self.task_results[
             "Задача 5: Проверка и исправление ошибок чертежа"] = result
@@ -405,7 +423,6 @@ class AutoCADTasksApp:
         return result
 
     def show_task_report(self, task_name: str, result):
-        """Показать отчет по задаче"""
         if result["errors"]:
             messagebox.showwarning(
                 "Завершено с ошибками",
@@ -418,7 +435,6 @@ class AutoCADTasksApp:
             )
 
     def show_final_report(self):
-        """Показать итоговый отчет"""
         messagebox.showinfo(
             "Итоговый отчет",
             "✅ Выполнение всех задач завершено!\n📋 Подробности смотрите в логе."

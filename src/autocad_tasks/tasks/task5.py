@@ -10,17 +10,16 @@ from autocad_tasks.utils.autocad_utils import AutoCADHelper
 class Task5:
     """Задача 5: Проверка и исправление ошибок чертежа (AUDIT)"""
 
-    def __init__(self, log_callback: Callable = None,
-                 load_previous: bool = False):
+    def __init__(self, log_callback: Callable = None, base_path: str = None, load_previous: bool = False):
         self.results_file = "task5_results.json"
         self.log_callback = log_callback
         self.report_text = ""
+        self.base_path = base_path
 
         if load_previous:
             self.last_results = self.load_last_results()
         else:
-            self.last_results = {"success": [], "errors": [], "report": "",
-                                 "timestamp": None}
+            self.last_results = {"success": [], "errors": [], "report": "", "timestamp": None}
 
         try:
             self.autocad = AutoCADHelper()
@@ -31,14 +30,12 @@ class Task5:
         self.results: Dict[str, List[str]] = {"success": [], "errors": []}
 
     def log(self, message: str):
-        """Вывод сообщения через callback или в консоль"""
         if self.log_callback:
             self.log_callback(message)
         else:
             print(message)
 
     def load_last_results(self) -> Dict:
-        """Загрузить результаты последнего выполнения"""
         if os.path.exists(self.results_file):
             try:
                 with open(self.results_file, 'r', encoding='utf-8') as f:
@@ -48,7 +45,6 @@ class Task5:
         return {"success": [], "errors": [], "report": "", "timestamp": None}
 
     def save_results(self):
-        """Сохранить результаты выполнения"""
         self.last_results = {
             "success": self.results["success"],
             "errors": self.results["errors"],
@@ -62,11 +58,9 @@ class Task5:
             pass
 
     def get_status(self) -> Dict:
-        """Получить статус последнего выполнения"""
         return self.last_results
 
     def run(self) -> Dict[str, List[str]]:
-        """Выполнение задачи"""
         self.log("\n" + "=" * 60)
         self.log("🔍 ЗАДАЧА 5: Проверка и исправление ошибок чертежа")
         self.log("=" * 60)
@@ -82,13 +76,11 @@ class Task5:
         self.log("⏳ Пожалуйста, подождите...")
         self.log("")
 
-        # Запускаем LISP скрипт
-        success, report_text = self.run_lisp_script()
+        success, _, _, report_text = self.autocad.run_lisp_script("audit_dwg.lsp", "AUDITDWG", self.log)
         self.report_text = report_text
 
-        # Формируем результаты
         if success:
-            self.results["success"] = ["Проверка выполнена успешно"]
+            self.results["success"] = ["Задача выполнена успешно"]
             self.results["errors"] = []
 
             self.log("\n" + "=" * 60)
@@ -117,36 +109,3 @@ class Task5:
         self.log("-" * 60)
 
         return self.results
-
-    def run_lisp_script(self) -> Tuple[bool, str]:
-        """Запустить LISP скрипт для AUDIT"""
-        try:
-            lisp_path = r"D:\Pycharm Projects\AutoCAD\RunPlot\audit_dwg.lsp"
-
-            if not os.path.exists(lisp_path):
-                self.log(f"  ❌ LISP файл не найден: {lisp_path}")
-                return False, ""
-
-            self.log("  🚀 Запуск AUDIT...")
-
-            # Загружаем и запускаем LISP
-            lisp_path_fixed = lisp_path.replace('\\', '/')
-            cmd = f'(load "{lisp_path_fixed}")\nAUDITDWG\n'
-            self.autocad.acad.ActiveDocument.SendCommand(cmd)
-
-            # Ждем выполнения
-            time.sleep(8)
-
-            self.log("  ✅ AUDIT выполнен")
-
-            # Сохраняем чертеж
-            self.log("  💾 Сохранение чертежа...")
-            self.autocad.acad.ActiveDocument.SendCommand("_.QSAVE\n")
-            time.sleep(2)
-            self.log("  ✅ Чертеж сохранен")
-
-            return True, "AUDIT выполнен. Чертеж сохранен."
-
-        except Exception as e:
-            self.log(f"  ❌ Ошибка: {e}")
-            return False, str(e)

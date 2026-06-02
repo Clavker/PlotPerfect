@@ -3,24 +3,23 @@
 import json
 import os
 import time
-from typing import Dict, List, Callable
+from typing import Dict, List, Callable, Tuple
 from autocad_tasks.utils.autocad_utils import AutoCADHelper
 
 
 class Task3:
-    """Задача 3: Очистка чертежа (PURGE)"""
+    """Задача 3: Очистка чертежа от неиспользуемых объектов (PURGE)"""
 
-    def __init__(self, log_callback: Callable = None,
-                 load_previous: bool = False):
+    def __init__(self, log_callback: Callable = None, base_path: str = None, load_previous: bool = False):
         self.results_file = "task3_results.json"
         self.log_callback = log_callback
         self.report_text = ""
+        self.base_path = base_path
 
         if load_previous:
             self.last_results = self.load_last_results()
         else:
-            self.last_results = {"success": [], "errors": [], "report": "",
-                                 "timestamp": None}
+            self.last_results = {"success": [], "errors": [], "report": "", "timestamp": None}
 
         try:
             self.autocad = AutoCADHelper()
@@ -31,14 +30,12 @@ class Task3:
         self.results: Dict[str, List[str]] = {"success": [], "errors": []}
 
     def log(self, message: str):
-        """Вывод сообщения через callback или в консоль"""
         if self.log_callback:
             self.log_callback(message)
         else:
             print(message)
 
     def load_last_results(self) -> Dict:
-        """Загрузить результаты последнего выполнения"""
         if os.path.exists(self.results_file):
             try:
                 with open(self.results_file, 'r', encoding='utf-8') as f:
@@ -48,7 +45,6 @@ class Task3:
         return {"success": [], "errors": [], "report": "", "timestamp": None}
 
     def save_results(self):
-        """Сохранить результаты выполнения"""
         self.last_results = {
             "success": self.results["success"],
             "errors": self.results["errors"],
@@ -62,19 +58,16 @@ class Task3:
             pass
 
     def get_status(self) -> Dict:
-        """Получить статус последнего выполнения"""
         return self.last_results
 
     def run(self) -> Dict[str, List[str]]:
-        """Выполнение задачи"""
         self.log("\n" + "=" * 60)
         self.log("🧹 ЗАДАЧА 3: Очистка чертежа от неиспользуемых объектов")
         self.log("=" * 60)
         self.log("\n📌 Описание:")
         self.log("  • Применение команды PURGE")
         self.log("  • Переход на лист Model")
-        self.log(
-            "  • Удаление всех неиспользуемых элементов (блоки, слои, стили, и т.д.)")
+        self.log("  • Удаление всех неиспользуемых элементов (блоки, слои, стили, и т.д.)")
         self.log("  • Возврат на исходный лист")
         self.log("  • Сохранение чертежа")
         self.log("-" * 60)
@@ -83,13 +76,11 @@ class Task3:
         self.log("⏳ Пожалуйста, подождите...")
         self.log("")
 
-        # Запускаем LISP скрипт
-        success, report_text = self.run_lisp_script()
+        success, _, _, report_text = self.autocad.run_lisp_script("cleanup_dwg.lsp", "CLEANUP", self.log)
         self.report_text = report_text
 
-        # Формируем результаты
         if success:
-            self.results["success"] = ["Очистка выполнена успешно"]
+            self.results["success"] = ["Задача выполнена успешно"]
             self.results["errors"] = []
 
             self.log("\n" + "=" * 60)
@@ -123,36 +114,3 @@ class Task3:
         self.log("-" * 60)
 
         return self.results
-
-    def run_lisp_script(self) -> tuple:
-        """Запустить LISP скрипт для очистки"""
-        try:
-            lisp_path = r"D:\Pycharm Projects\AutoCAD\RunPlot\cleanup_dwg.lsp"
-
-            if not os.path.exists(lisp_path):
-                self.log(f"  ❌ LISP файл не найден: {lisp_path}")
-                return False, ""
-
-            self.log("  🚀 Запуск LISP скрипта...")
-
-            # Загружаем и запускаем LISP
-            lisp_path_fixed = lisp_path.replace('\\', '/')
-            cmd = f'(load "{lisp_path_fixed}")\nCLEANUP\n'
-            self.autocad.acad.ActiveDocument.SendCommand(cmd)
-
-            # Ждем выполнения
-            time.sleep(8)
-
-            self.log("  ✅ LISP скрипт выполнен")
-
-            # Сохраняем чертеж
-            self.log("  💾 Сохранение чертежа...")
-            self.autocad.acad.ActiveDocument.SendCommand("_.QSAVE\n")
-            time.sleep(2)
-            self.log("  ✅ Чертеж сохранен")
-
-            return True, "Очистка выполнена. Чертеж сохранен."
-
-        except Exception as e:
-            self.log(f"  ❌ Ошибка: {e}")
-            return False, str(e)

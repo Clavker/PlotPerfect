@@ -10,17 +10,16 @@ from autocad_tasks.utils.autocad_utils import AutoCADHelper
 class Task4:
     """Задача 4: Удаление дублирующихся объектов (OVERKILL)"""
 
-    def __init__(self, log_callback: Callable = None,
-                 load_previous: bool = False):
+    def __init__(self, log_callback: Callable = None, base_path: str = None, load_previous: bool = False):
         self.results_file = "task4_results.json"
         self.log_callback = log_callback
         self.report_text = ""
+        self.base_path = base_path
 
         if load_previous:
             self.last_results = self.load_last_results()
         else:
-            self.last_results = {"success": [], "errors": [], "report": "",
-                                 "timestamp": None}
+            self.last_results = {"success": [], "errors": [], "report": "", "timestamp": None}
 
         try:
             self.autocad = AutoCADHelper()
@@ -31,14 +30,12 @@ class Task4:
         self.results: Dict[str, List[str]] = {"success": [], "errors": []}
 
     def log(self, message: str):
-        """Вывод сообщения через callback или в консоль"""
         if self.log_callback:
             self.log_callback(message)
         else:
             print(message)
 
     def load_last_results(self) -> Dict:
-        """Загрузить результаты последнего выполнения"""
         if os.path.exists(self.results_file):
             try:
                 with open(self.results_file, 'r', encoding='utf-8') as f:
@@ -48,7 +45,6 @@ class Task4:
         return {"success": [], "errors": [], "report": "", "timestamp": None}
 
     def save_results(self):
-        """Сохранить результаты выполнения"""
         self.last_results = {
             "success": self.results["success"],
             "errors": self.results["errors"],
@@ -62,11 +58,9 @@ class Task4:
             pass
 
     def get_status(self) -> Dict:
-        """Получить статус последнего выполнения"""
         return self.last_results
 
     def run(self) -> Dict[str, List[str]]:
-        """Выполнение задачи"""
         self.log("\n" + "=" * 60)
         self.log("🗑️ ЗАДАЧА 4: Удаление дублирующихся объектов")
         self.log("=" * 60)
@@ -83,13 +77,11 @@ class Task4:
         self.log("⏳ Пожалуйста, подождите...")
         self.log("")
 
-        # Запускаем LISP скрипт
-        success, report_text = self.run_lisp_script()
+        success, _, _, report_text = self.autocad.run_lisp_script("overkill_dwg.lsp", "OVERKILLCLEAN", self.log)
         self.report_text = report_text
 
-        # Формируем результаты
         if success:
-            self.results["success"] = ["OVERKILL выполнен успешно"]
+            self.results["success"] = ["Задача выполнена успешно"]
             self.results["errors"] = []
 
             self.log("\n" + "=" * 60)
@@ -123,36 +115,3 @@ class Task4:
         self.log("-" * 60)
 
         return self.results
-
-    def run_lisp_script(self) -> Tuple[bool, str]:
-        """Запустить LISP скрипт для OVERKILL"""
-        try:
-            lisp_path = r"D:\Pycharm Projects\AutoCAD\RunPlot\overkill_dwg.lsp"
-
-            if not os.path.exists(lisp_path):
-                self.log(f"  ❌ LISP файл не найден: {lisp_path}")
-                return False, ""
-
-            self.log("  🚀 Запуск LISP скрипта...")
-
-            # Загружаем и запускаем LISP
-            lisp_path_fixed = lisp_path.replace('\\', '/')
-            cmd = f'(load "{lisp_path_fixed}")\nOVERKILLCLEAN\n'
-            self.autocad.acad.ActiveDocument.SendCommand(cmd)
-
-            # Ждем выполнения (OVERKILL может быть долгим)
-            time.sleep(15)
-
-            self.log("  ✅ LISP скрипт выполнен")
-
-            # Сохраняем чертеж
-            self.log("  💾 Сохранение чертежа...")
-            self.autocad.acad.ActiveDocument.SendCommand("_.QSAVE\n")
-            time.sleep(2)
-            self.log("  ✅ Чертеж сохранен")
-
-            return True, "OVERKILL выполнен. Чертеж сохранен."
-
-        except Exception as e:
-            self.log(f"  ❌ Ошибка: {e}")
-            return False, str(e)
